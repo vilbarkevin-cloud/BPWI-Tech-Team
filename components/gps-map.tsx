@@ -1,28 +1,42 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
-import 'leaflet/dist/leaflet.css'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { MapPin } from 'lucide-react'
+import dynamic from 'next/dynamic'
 
-// Lazy initialize Leaflet icon to avoid window reference on server
-let iconInstance: any = null
-function getIcon() {
-  if (typeof window === 'undefined') return null
-  if (!iconInstance) {
-    const L = require('leaflet')
-    iconInstance = L.icon({
-      iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-      iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-      shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-      iconSize: [25, 41],
-      iconAnchor: [12, 41],
-      popupAnchor: [1, -34],
-      shadowSize: [41, 41],
-    })
-  }
-  return iconInstance
-}
+// Dynamically import leaflet components only on client
+const MapContainer = dynamic(
+  async () => {
+    const { MapContainer } = await import('react-leaflet')
+    return MapContainer
+  },
+  { ssr: false }
+)
+
+const TileLayer = dynamic(
+  async () => {
+    const { TileLayer } = await import('react-leaflet')
+    return TileLayer
+  },
+  { ssr: false }
+)
+
+const Marker = dynamic(
+  async () => {
+    const { Marker } = await import('react-leaflet')
+    return Marker
+  },
+  { ssr: false }
+)
+
+const Popup = dynamic(
+  async () => {
+    const { Popup } = await import('react-leaflet')
+    return Popup
+  },
+  { ssr: false }
+)
 
 interface GpsMapProps {
   locations?: Array<{ id: string; lat: number; lng: number; name: string }>
@@ -40,30 +54,47 @@ export function GpsMap({
   zoom = 11,
 }: GpsMapProps) {
   const [isClient, setIsClient] = useState(false)
-  
+  const [cssLoaded, setCssLoaded] = useState(false)
+
   useEffect(() => {
     setIsClient(true)
+    // Load CSS only on client
+    import('leaflet/dist/leaflet.css').then(() => setCssLoaded(true))
   }, [])
 
-  if (!isClient) {
-    return <div className="bg-muted h-96 rounded-lg flex items-center justify-center">Loading map...</div>
+  if (!isClient || !cssLoaded) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MapPin className="h-5 w-5" />
+            GPS Map
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-96 bg-muted animate-pulse rounded-lg" />
+        </CardContent>
+      </Card>
+    )
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>GPS Map</CardTitle>
-        <CardDescription>Field locations and facilities</CardDescription>
+        <CardTitle className="flex items-center gap-2">
+          <MapPin className="h-5 w-5" />
+          GPS Map - Field Locations
+        </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-96 rounded-lg overflow-hidden border border-input">
-          <MapContainer center={center} zoom={zoom} style={{ height: '100%', width: '100%' }}>
+        <div className="h-96 border rounded-lg overflow-hidden">
+          <MapContainer center={center as any} zoom={zoom} style={{ height: '100%', width: '100%' }}>
             <TileLayer
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              attribution='&copy; OpenStreetMap contributors'
             />
             {locations.map((location) => (
-              <Marker key={location.id} position={[location.lat, location.lng]} icon={getIcon() || undefined}>
+              <Marker key={location.id} position={[location.lat, location.lng] as any}>
                 <Popup>{location.name}</Popup>
               </Marker>
             ))}
