@@ -24,19 +24,33 @@ export function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
     setError(null)
     setLoading(true)
 
-    const { error } = isSignUp
-      ? await authClient.signUp.email({ email, password, name })
-      : await authClient.signIn.email({ email, password })
+    try {
+      const data = isSignUp
+        ? { email, password, name }
+        : { email, password }
+      
+      console.log('[v0] Auth attempt:', { isSignUp, ...data })
+      const result = isSignUp
+        ? await authClient.signUp.email(data as Parameters<typeof authClient.signUp.email>[0])
+        : await authClient.signIn.email(data as Parameters<typeof authClient.signIn.email>[0])
 
-    setLoading(false)
+      console.log('[v0] Auth result:', result)
+      setLoading(false)
 
-    if (error) {
-      setError(error.message ?? 'Something went wrong')
-      return
+      if (result.error) {
+        console.error('[v0] Auth error object:', result.error)
+        setError(result.error.message ?? 'Something went wrong')
+        return
+      }
+
+      console.log('[v0] Auth success, redirecting...')
+      router.push('/')
+      router.refresh()
+    } catch (err) {
+      console.error('[v0] Auth exception:', err)
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred')
+      setLoading(false)
     }
-
-    router.push('/')
-    router.refresh()
   }
 
   return (

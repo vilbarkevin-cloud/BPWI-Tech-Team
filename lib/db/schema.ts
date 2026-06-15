@@ -2,6 +2,7 @@ import { pgTable, text, varchar, boolean, timestamp, decimal, jsonb, integer, in
 import { relations } from 'drizzle-orm'
 
 // ============ BETTER AUTH TABLES ============
+// These MUST have camelCase column names as Better Auth expects them
 export const user = pgTable(
   'user',
   {

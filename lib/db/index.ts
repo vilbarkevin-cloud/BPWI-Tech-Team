@@ -2,22 +2,19 @@ import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
 import * as schema from './schema'
 
+// Create a single pool instance for use across the app
 let poolInstance: Pool | null = null
 
-function getPoolInstance(): Pool {
-  if (!poolInstance) {
+export function getPoolInstance(): Pool {
+  if (!poolInstance && process.env.DATABASE_URL) {
     poolInstance = new Pool({
       connectionString: process.env.DATABASE_URL,
     })
   }
-  return poolInstance
+  return poolInstance!
 }
 
-export const pool = new Proxy({} as Pool, {
-  get(target, prop) {
-    return Reflect.get(getPoolInstance(), prop)
-  },
-})
+export const pool = getPoolInstance()
 
-export const db = drizzle(getPoolInstance(), { schema })
-
+// Drizzle client configured to query the neon_auth schema
+export const db = drizzle(pool, { schema })
