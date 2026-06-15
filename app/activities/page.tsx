@@ -1,11 +1,17 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { GpsMap } from '@/components/gps-map'
 import { PhotoUploader } from '@/components/photo-uploader'
 import { MapPin, Plus, Search, Filter } from 'lucide-react'
+
+// Dynamically import the map to avoid SSR issues
+const GpsMap = dynamic(() => import('@/components/gps-map').then(mod => ({ default: mod.GpsMap })), {
+  ssr: false,
+  loading: () => <div className="h-96 bg-muted animate-pulse rounded-lg" />,
+})
 
 const mockActivities = [
   {
