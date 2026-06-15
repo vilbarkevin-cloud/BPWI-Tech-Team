@@ -1,79 +1,43 @@
 import { betterAuth } from 'better-auth'
-import { Pool } from 'pg'
+import { pool } from '@/lib/db'
 
-let authInstance: any = null
-
-function initializeAuth() {
-  // Skip initialization if DATABASE_URL is not available (e.g., during build)
-  if (!process.env.DATABASE_URL) {
-    return {
-      api: {
-        getSession: async () => null,
-      },
-      handler: async () => new Response('Auth not initialized', { status: 503 }),
-    }
-  }
-
-  if (authInstance) {
-    return authInstance
-  }
-
-  try {
-    const pool = new Pool({ connectionString: process.env.DATABASE_URL })
-    
-    authInstance = betterAuth({
-      database: pool,
-      baseURL:
-        process.env.BETTER_AUTH_URL ??
-        (process.env.VERCEL_PROJECT_PRODUCTION_URL
-          ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-          : process.env.VERCEL_URL
-            ? `https://${process.env.VERCEL_URL}`
-            : process.env.V0_RUNTIME_URL),
-      emailAndPassword: {
-        enabled: true,
-        autoSignIn: true,
-      },
-      trustedOrigins: [
-        ...(process.env.V0_RUNTIME_URL ? [process.env.V0_RUNTIME_URL] : []),
-        ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
-        ...(process.env.VERCEL_PROJECT_PRODUCTION_URL
-          ? [`https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`]
-          : []),
-      ],
-      session: {
-        expiresIn: 60 * 60 * 24 * 7, // 7 days
-        updateAge: 60 * 60 * 24, // 1 day
-      },
-      ...(process.env.NODE_ENV === 'development'
-        ? {
-            advanced: {
-              defaultCookieAttributes: {
-                sameSite: 'none' as const,
-                secure: true,
-              },
-            },
-          }
-        : {}),
-    })
-  } catch (error) {
-    console.error('[v0] Auth initialization error:', error)
-    // Return a safe fallback during build time
-    return {
-      api: {
-        getSession: async () => null,
-      },
-      handler: async () => new Response('Auth initialization failed', { status: 500 }),
-    }
-  }
-  
-  return authInstance
-}
-
-export const auth = new Proxy({} as any, {
-  get(target, prop) {
-    return Reflect.get(initializeAuth(), prop)
+export const auth = betterAuth({
+  database: pool,
+  baseURL:
+    process.env.BETTER_AUTH_URL ??
+    (process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+      : process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : process.env.V0_RUNTIME_URL),
+  emailAndPassword: {
+    enabled: true,
+    autoSignIn: true,
+    requireEmailVerification: false,
   },
+  trustedOrigins: [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    ...(process.env.V0_RUNTIME_URL ? [process.env.V0_RUNTIME_URL] : []),
+    ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
+    ...(process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? [`https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`]
+      : []),
+  ],
+  session: {
+    expiresIn: 60 * 60 * 24 * 7, // 7 days
+    updateAge: 60 * 60 * 24, // 1 day
+  },
+  ...(process.env.NODE_ENV === 'development'
+    ? {
+        advanced: {
+          defaultCookieAttributes: {
+            sameSite: 'none' as const,
+            secure: true,
+          },
+        },
+      }
+    : {}),
 })
 
 
