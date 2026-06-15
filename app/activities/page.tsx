@@ -1,17 +1,32 @@
 'use client'
 
-import dynamic from 'next/dynamic'
+import dynamicImport from 'next/dynamic'
 import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { PhotoUploader } from '@/components/photo-uploader'
 import { MapPin, Plus, Search, Filter } from 'lucide-react'
 
-// Dynamically import the map to avoid SSR issues
-const GpsMap = dynamic(() => import('@/components/gps-map').then(mod => ({ default: mod.GpsMap })), {
-  ssr: false,
-  loading: () => <div className="h-96 bg-muted animate-pulse rounded-lg" />,
-})
+// Prevent static prerendering of this page since it uses dynamic client components
+export const dynamic = 'force-dynamic'
+
+// Lazy load map component with no SSR
+const GpsMapLazy = dynamicImport(
+  () => import('@/components/gps-map').then(mod => ({ default: mod.GpsMap })),
+  { 
+    ssr: false,
+    loading: () => (
+      <Card>
+        <CardHeader>
+          <CardTitle>GPS Map</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-96 bg-muted animate-pulse rounded-lg" />
+        </CardContent>
+      </Card>
+    ),
+  }
+)
 
 const mockActivities = [
   {
@@ -209,7 +224,7 @@ export default function ActivitiesPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          <GpsMap
+          <GpsMapLazy
             locations={mockActivities.map((a) => ({
               id: a.id,
               lat: a.lat,
